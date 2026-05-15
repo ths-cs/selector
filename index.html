@@ -67,6 +67,21 @@
             font-family: monospace;
             font-weight: bold;
         }
+
+        #copy-toast {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #10b981;
+            color: white;
+            padding: 8px 24px;
+            border-radius: 99px;
+            font-weight: bold;
+            opacity: 0;
+            transition: opacity 0.3s;
+            pointer-events: none;
+        }
     </style>
 </head>
 <body class="flex flex-col md:flex-row h-screen w-screen p-4 md:p-8 gap-6">
@@ -108,16 +123,8 @@
             </button>
         </div>
 
-        <!-- Navigation Controls -->
+        <!-- Navigation Controls / Footer -->
         <div class="absolute bottom-12 flex flex-col items-center gap-6">
-            <div class="flex gap-4">
-                <button onclick="prevPresenter()" class="p-4 bg-slate-800 hover:bg-slate-700 rounded-2xl border border-slate-700 transition-all active:scale-95 group">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-slate-400 group-hover:text-white"><path d="m15 18-6-6 6-6"/></svg>
-                </button>
-                <button onclick="nextPresenter()" class="px-12 py-4 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-2xl shadow-xl shadow-indigo-900/20 transition-all active:scale-95 text-lg">
-                    NEXT PRESENTER
-                </button>
-            </div>
             
             <!-- Hotkey Legend -->
             <div class="flex flex-wrap justify-center gap-3 max-w-md px-4">
@@ -128,9 +135,14 @@
                 <div class="hotkey-pill"><span class="key-box">←</span> Prev</div>
             </div>
 
-            <button onclick="resetOrder()" class="text-[10px] text-slate-600 hover:text-indigo-400 uppercase tracking-widest font-bold transition-colors">
-                Reset & Reshuffle List
-            </button>
+            <div class="flex gap-4">
+                <button onclick="exportList()" class="px-6 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-[10px] font-bold rounded-lg border border-slate-700 uppercase tracking-widest transition-all">
+                    Copy Export List (With Timestamps)
+                </button>
+                <button onclick="resetOrder()" class="px-6 py-2 text-[10px] text-slate-600 hover:text-indigo-400 uppercase tracking-widest font-bold transition-colors">
+                    Reset & Reshuffle
+                </button>
+            </div>
         </div>
     </main>
 
@@ -145,6 +157,8 @@
             <!-- List items injected here -->
         </div>
     </aside>
+
+    <div id="copy-toast">Export Copied to Clipboard!</div>
 
     <script>
         const studentNames = [
@@ -176,7 +190,7 @@
 "XADRIAN",
 "ALEXA",
 "DARIUS",
-"ANGEL",
+"ANGEL"
 
         ];
 
@@ -190,12 +204,17 @@
                 currentIndex--;
                 [array[currentIndex], array[randomIndex]] = [array[randomIndex], array[currentIndex]];
             }
-            return array.map(name => ({ name, status: 'pending' }));
+            return array.map(name => ({ 
+                name, 
+                status: 'pending',
+                timestamp: null 
+            }));
         }
 
         function setStatus(status) {
             if (currentIndex >= 0 && currentIndex < shuffledData.length) {
                 shuffledData[currentIndex].status = status;
+                shuffledData[currentIndex].timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
                 updateDisplay();
             }
         }
@@ -265,7 +284,10 @@
                 
                 div.className = `p-2 px-3 rounded-lg text-xs font-bold transition-all border flex justify-between items-center ${bgClass}`;
                 div.innerHTML = `
-                    <span><span class="opacity-40 mr-2">${index + 1}</span> ${student.name}</span>
+                    <div class="flex flex-col">
+                        <span><span class="opacity-40 mr-1">${index + 1}</span> ${student.name}</span>
+                        ${student.timestamp ? `<span class="text-[8px] opacity-50 mt-1">${student.timestamp}</span>` : ''}
+                    </div>
                     <span class="font-black">${statusIcon}</span>
                 `;
                 queueList.appendChild(div);
@@ -288,6 +310,28 @@
                 currentIndex--;
                 updateDisplay();
             }
+        }
+
+        function exportList() {
+            const date = new Date().toLocaleDateString();
+            let text = `Presentation Session: ${date}\n--------------------------------\n`;
+            
+            shuffledData.forEach((s, i) => {
+                const status = s.status === 'pending' ? 'Not reached' : s.status.toUpperCase();
+                const time = s.timestamp ? ` at ${s.timestamp}` : '';
+                text += `${i+1}. ${s.name.padEnd(20)} | Status: ${status}${time}\n`;
+            });
+
+            const dummy = document.createElement("textarea");
+            document.body.appendChild(dummy);
+            dummy.value = text;
+            dummy.select();
+            document.execCommand("copy");
+            document.body.removeChild(dummy);
+
+            const toast = document.getElementById('copy-toast');
+            toast.style.opacity = '1';
+            setTimeout(() => { toast.style.opacity = '0'; }, 2000);
         }
 
         function resetOrder() {
