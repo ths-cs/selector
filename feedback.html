@@ -9,7 +9,6 @@
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
         body { font-family: 'Inter', sans-serif; }
         
-        /* Custom Radio Styling for 0-4 scale */
         .rating-group input { display: none; }
         .rating-group label {
             display: flex;
@@ -32,10 +31,6 @@
             transform: scale(1.1);
             box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
         }
-        .rating-group label:hover {
-            border-color: #4f46e5;
-            color: #4f46e5;
-        }
 
         #toast {
             position: fixed;
@@ -52,6 +47,25 @@
             pointer-events: none;
             z-index: 100;
         }
+
+        .loading-spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #4f46e5;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        .modal-overlay {
+            background-color: rgba(15, 23, 42, 0.8);
+            backdrop-filter: blur(4px);
+        }
+        
+        /* Secret Teacher Unlock Style */
+        .teacher-only { display: none; }
+        body.is-teacher .teacher-only { display: block; }
     </style>
 </head>
 <body class="bg-slate-50 min-h-screen pb-12">
@@ -59,25 +73,40 @@
     <!-- Navigation Header -->
     <nav class="bg-white border-b border-slate-200 px-6 py-4 sticky top-0 z-10 shadow-sm">
         <div class="max-w-2xl mx-auto flex justify-between items-center">
-            <h1 class="text-xl font-bold text-slate-800">Peer Feedback</h1>
-            <button onclick="toggleView()" id="view-toggle" class="text-sm font-semibold text-indigo-600 hover:text-indigo-800 transition text-right">
-                Switch to Dashboard
-            </button>
+            <h1 onclick="handleTitleClick()" class="text-xl font-bold text-slate-800 cursor-default select-none">Peer Feedback</h1>
+            <div class="flex items-center gap-4">
+                <span id="connection-status" class="w-3 h-3 rounded-full bg-slate-300" title="Checking connection..."></span>
+                <button onclick="toggleView()" id="view-toggle" class="text-sm font-semibold text-indigo-600 hover:text-indigo-800 transition">
+                    Switch to Dashboard
+                </button>
+            </div>
         </div>
     </nav>
 
     <main class="max-w-2xl mx-auto p-6">
         
+        <!-- Step 0: Class Code (Required once) -->
+        <section id="setup-view" class="bg-white rounded-2xl shadow-sm border border-slate-200 p-8 text-center">
+            <h2 class="text-2xl font-bold text-slate-900 mb-2">Enter Class Code</h2>
+            <p class="text-slate-500 mb-6">Ask your teacher for the code to join this session.</p>
+            <input type="text" id="class-code-input" placeholder="e.g. PERIOD1" class="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl mb-4 text-center font-bold uppercase tracking-widest outline-none focus:ring-2 focus:ring-indigo-500">
+            <button onclick="joinSession()" class="w-full bg-indigo-600 text-white font-bold py-4 rounded-xl shadow-lg hover:bg-indigo-700 transition text-lg">
+                Join Session
+            </button>
+        </section>
+        
         <!-- Submission Form View -->
-        <section id="form-view" class="space-y-6">
+        <section id="form-view" class="hidden space-y-6">
             <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-8">
                 <div class="mb-6">
-                    <h2 class="text-2xl font-bold text-slate-900">Rate a Presentation</h2>
+                    <div class="flex justify-between items-center">
+                        <h2 class="text-2xl font-bold text-slate-900">Rate Presentation</h2>
+                        <span id="display-class-code" class="text-[10px] font-bold bg-slate-100 text-slate-500 px-2 py-1 rounded"></span>
+                    </div>
                     <p class="text-slate-500 text-sm">Scale: 0 (Needs Work) to 4 (Exceptional)</p>
                 </div>
                 
                 <form id="feedback-form" onsubmit="submitFeedback(event)" class="space-y-8">
-                    <!-- Presenter Selection -->
                     <div>
                         <label class="block text-sm font-bold text-slate-700 mb-2 uppercase tracking-wide">Who is presenting?</label>
                         <select id="presenter-select" required class="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition">
@@ -85,11 +114,7 @@
                         </select>
                     </div>
 
-                    <hr class="border-slate-100">
-
-                    <!-- Ratings -->
                     <div class="space-y-8">
-                        <!-- Clarity -->
                         <div class="space-y-3">
                             <span class="font-bold text-slate-700 block">Clarity (Voice & Visuals)</span>
                             <div class="flex gap-3 rating-group">
@@ -101,7 +126,6 @@
                             </div>
                         </div>
 
-                        <!-- Engagement -->
                         <div class="space-y-3">
                             <span class="font-bold text-slate-700 block">Engagement (Eye Contact)</span>
                             <div class="flex gap-3 rating-group">
@@ -113,7 +137,6 @@
                             </div>
                         </div>
 
-                        <!-- Content -->
                         <div class="space-y-3">
                             <span class="font-bold text-slate-700 block">Content (Knowledge)</span>
                             <div class="flex gap-3 rating-group">
@@ -126,52 +149,127 @@
                         </div>
                     </div>
 
-                    <!-- Comments -->
                     <div>
-                        <label class="block text-sm font-bold text-slate-700 mb-2 uppercase tracking-wide">Feedback & Comments</label>
-                        <textarea id="comment" rows="4" placeholder="What did they do well? What could be improved?" class="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition"></textarea>
+                        <label class="block text-sm font-bold text-slate-700 mb-2 uppercase tracking-wide">Comments</label>
+                        <textarea id="comment" rows="3" placeholder="What did they do well?" class="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition"></textarea>
                     </div>
 
-                    <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 rounded-xl shadow-lg shadow-indigo-200 transition-all active:scale-[0.98]">
+                    <button type="submit" id="submit-btn" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 rounded-xl shadow-lg shadow-indigo-200 transition-all flex items-center justify-center gap-2">
                         Submit Feedback
                     </button>
                 </form>
             </div>
         </section>
 
-        <!-- Dashboard View (Hidden by default) -->
+        <!-- Dashboard View -->
         <section id="dashboard-view" class="hidden space-y-6">
             <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-8">
                 <div class="flex justify-between items-center mb-6">
-                    <h2 class="text-2xl font-bold text-slate-900">Class Results</h2>
-                    <button onclick="exportResults()" class="bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold px-4 py-2 rounded-lg transition uppercase tracking-wider">
-                        Export All Data
-                    </button>
+                    <div>
+                        <h2 class="text-2xl font-bold text-slate-900">Class Results</h2>
+                        <p id="total-count" class="text-xs text-slate-400 font-bold uppercase"></p>
+                    </div>
+                    <div class="flex gap-2">
+                        <!-- Only visible if body has class 'is-teacher' -->
+                        <button onclick="showClearModal()" class="teacher-only bg-red-50 hover:bg-red-100 text-red-600 text-xs font-bold px-4 py-2 rounded-lg transition uppercase tracking-wider border border-red-200">
+                            Clear Data
+                        </button>
+                        <button onclick="exportResults()" class="bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold px-4 py-2 rounded-lg transition uppercase tracking-wider">
+                            Export
+                        </button>
+                    </div>
                 </div>
                 
-                <div id="results-container" class="space-y-4">
-                    <!-- Results dynamically generated here -->
-                </div>
+                <div id="results-container" class="space-y-4"></div>
             </div>
         </section>
 
     </main>
 
-    <!-- Success Message Overlay -->
+    <!-- Teacher Auth Modal -->
+    <div id="teacher-auth-modal" class="fixed inset-0 z-[70] flex items-center justify-center p-4 hidden">
+        <div class="modal-overlay absolute inset-0"></div>
+        <div class="bg-white rounded-2xl p-8 max-w-sm w-full relative z-10 shadow-2xl text-center">
+            <h3 class="text-xl font-bold text-slate-900 mb-2">Teacher Login</h3>
+            <p class="text-slate-500 mb-6 text-sm">Enter the secret password to enable administrative controls.</p>
+            <input type="password" id="teacher-pass" class="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl mb-4 text-center outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Password">
+            <div class="flex gap-3">
+                <button onclick="hideTeacherModal()" class="flex-1 px-4 py-3 bg-slate-100 text-slate-600 rounded-xl font-bold">Cancel</button>
+                <button onclick="checkTeacherAuth()" class="flex-1 px-4 py-3 bg-indigo-600 text-white rounded-xl font-bold">Unlock</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Confirmation Modal -->
+    <div id="clear-modal" class="fixed inset-0 z-[60] flex items-center justify-center p-4 hidden">
+        <div class="modal-overlay absolute inset-0"></div>
+        <div class="bg-white rounded-2xl p-8 max-w-sm w-full relative z-10 shadow-2xl text-center">
+            <div class="w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+            </div>
+            <h3 class="text-xl font-bold text-slate-900 mb-2">Clear all data?</h3>
+            <p class="text-slate-500 mb-6 text-sm">This will permanently delete all feedback for the current class code.</p>
+            <div class="flex gap-3">
+                <button onclick="hideClearModal()" class="flex-1 px-4 py-3 bg-slate-100 text-slate-600 rounded-xl font-bold hover:bg-slate-200 transition">Cancel</button>
+                <button onclick="clearSessionData()" class="flex-1 px-4 py-3 bg-red-600 text-white rounded-xl font-bold hover:bg-red-700 transition">Yes, Clear</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Success Overlays -->
     <div id="success-overlay" class="fixed inset-0 bg-indigo-900/90 flex flex-col items-center justify-center text-white p-6 z-50 hidden">
         <div class="w-20 h-20 bg-emerald-500 rounded-full flex items-center justify-center mb-6">
             <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
         </div>
-        <h3 class="text-3xl font-bold mb-2">Feedback Received!</h3>
-        <p class="text-indigo-200 mb-8">Thank you for your constructive peer review.</p>
-        <button onclick="resetForm()" class="bg-white text-indigo-900 px-8 py-3 rounded-xl font-bold hover:bg-indigo-50 transition">
-            Submit Another
-        </button>
+        <h3 class="text-3xl font-bold mb-2">Submitted!</h3>
+        <button onclick="resetForm()" class="bg-white text-indigo-900 px-8 py-3 rounded-xl font-bold">Submit Another</button>
     </div>
 
     <div id="toast">Copied to clipboard!</div>
 
-    <script>
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, addDoc, onSnapshot, query, getDocs, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        const firebaseConfig = JSON.parse(__firebase_config);
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'presentation-feedback-app';
+
+        let user = null;
+        let currentClassCode = localStorage.getItem('classCode') || '';
+        let feedbackEntries = [];
+        let unsubscribe = null;
+        
+        // TEACHER AUTH LOGIC
+        const TEACHER_PASS = "w1ldC@ts"; // Change this to whatever you'd like
+        if (localStorage.getItem('isTeacher') === 'true') {
+            document.body.classList.add('is-teacher');
+        }
+
+        window.handleTitleClick = function() {
+            // Secret: Click the title to open teacher login
+            document.getElementById('teacher-auth-modal').classList.remove('hidden');
+        };
+
+        window.hideTeacherModal = function() {
+            document.getElementById('teacher-auth-modal').classList.add('hidden');
+        };
+
+        window.checkTeacherAuth = function() {
+            const pass = document.getElementById('teacher-pass').value;
+            if (pass.toLowerCase() === TEACHER_PASS) {
+                localStorage.setItem('isTeacher', 'true');
+                document.body.classList.add('is-teacher');
+                hideTeacherModal();
+                showToast("Teacher Mode Unlocked!");
+            } else {
+                showToast("Incorrect password.");
+            }
+        };
+
         const studentNames = [
             "GENESIS A",
 "SANTANA B",
@@ -204,38 +302,79 @@
 "ANGEL V"
         ];
 
-        let feedbackData = [];
+        async function startApp() {
+            const initAuth = async () => {
+                try {
+                    if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                        await signInWithCustomToken(auth, __initial_auth_token);
+                    } else {
+                        await signInAnonymously(auth);
+                    }
+                } catch (e) { console.error("Auth error", e); }
+            };
+            await initAuth();
 
-        function init() {
+            onAuthStateChanged(auth, (u) => {
+                user = u;
+                if (user) {
+                    document.getElementById('connection-status').classList.replace('bg-slate-300', 'bg-emerald-500');
+                    if (currentClassCode) setupSessionUI();
+                }
+            });
+
             const select = document.getElementById('presenter-select');
             studentNames.sort().forEach(name => {
                 const opt = document.createElement('option');
-                opt.value = name;
-                opt.textContent = name;
+                opt.value = name; opt.textContent = name;
                 select.appendChild(opt);
             });
-            renderDashboard();
         }
 
-        function toggleView() {
-            const formView = document.getElementById('form-view');
-            const dashboardView = document.getElementById('dashboard-view');
-            const toggleBtn = document.getElementById('view-toggle');
+        window.joinSession = function() {
+            const codeInput = document.getElementById('class-code-input').value.trim().toUpperCase();
+            if (!codeInput) return;
+            currentClassCode = codeInput;
+            localStorage.setItem('classCode', currentClassCode);
+            setupSessionUI();
+        };
 
-            if (formView.classList.contains('hidden')) {
-                formView.classList.remove('hidden');
-                dashboardView.classList.add('hidden');
-                toggleBtn.textContent = "Switch to Dashboard";
-            } else {
-                formView.classList.add('hidden');
-                dashboardView.classList.remove('hidden');
-                toggleBtn.textContent = "Back to Form";
+        function setupSessionUI() {
+            document.getElementById('setup-view').classList.add('hidden');
+            document.getElementById('form-view').classList.remove('hidden');
+            document.getElementById('display-class-code').textContent = `CODE: ${currentClassCode}`;
+            startListening();
+        }
+
+        function startListening() {
+            if (!user || !currentClassCode) return;
+            if (unsubscribe) unsubscribe();
+
+            const colRef = collection(db, 'artifacts', appId, 'public', 'data', currentClassCode);
+            unsubscribe = onSnapshot(colRef, (snapshot) => {
+                feedbackEntries = snapshot.docs.map(doc => doc.data());
                 renderDashboard();
-            }
+            }, (err) => console.error("Firestore error", err));
         }
 
-        function submitFeedback(e) {
+        window.toggleView = function() {
+            const form = document.getElementById('form-view');
+            const dash = document.getElementById('dashboard-view');
+            const btn = document.getElementById('view-toggle');
+            if (form.classList.contains('hidden')) {
+                form.classList.remove('hidden'); dash.classList.add('hidden');
+                btn.textContent = "Switch to Dashboard";
+            } else {
+                form.classList.add('hidden'); dash.classList.remove('hidden');
+                btn.textContent = "Back to Form"; renderDashboard();
+            }
+        };
+
+        window.submitFeedback = async function(e) {
             e.preventDefault();
+            if (!user || !currentClassCode) return;
+            const btn = document.getElementById('submit-btn');
+            btn.disabled = true;
+            btn.innerHTML = '<div class="loading-spinner"></div> Sending...';
             const formData = new FormData(e.target);
             const entry = {
                 presenter: document.getElementById('presenter-select').value,
@@ -243,24 +382,47 @@
                 engagement: parseInt(formData.get('engagement')),
                 content: parseInt(formData.get('content')),
                 comment: document.getElementById('comment').value,
-                timestamp: new Date().toLocaleString()
+                timestamp: new Date().toISOString(),
+                uid: user.uid
             };
+            try {
+                await addDoc(collection(db, 'artifacts', appId, 'public', 'data', currentClassCode), entry);
+                document.getElementById('success-overlay').classList.remove('hidden');
+            } catch (err) { alert("Error sending feedback."); }
+            finally { btn.disabled = false; btn.innerText = 'Submit Feedback'; }
+        };
 
-            feedbackData.push(entry);
-            document.getElementById('success-overlay').classList.remove('hidden');
-        }
-
-        function resetForm() {
+        window.resetForm = function() {
             document.getElementById('feedback-form').reset();
             document.getElementById('success-overlay').classList.add('hidden');
-            renderDashboard();
-        }
+        };
+
+        window.showClearModal = function() {
+            document.getElementById('clear-modal').classList.remove('hidden');
+        };
+
+        window.hideClearModal = function() {
+            document.getElementById('clear-modal').classList.add('hidden');
+        };
+
+        window.clearSessionData = async function() {
+            if (!user || !currentClassCode) return;
+            hideClearModal();
+            const colRef = collection(db, 'artifacts', appId, 'public', 'data', currentClassCode);
+            try {
+                const snapshot = await getDocs(colRef);
+                const deletePromises = snapshot.docs.map(d => deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', currentClassCode, d.id)));
+                await Promise.all(deletePromises);
+                showToast("Session cleared successfully!");
+            } catch (err) {
+                console.error(err);
+                showToast("Error clearing data.");
+            }
+        };
 
         function getAggregatedData() {
-            return feedbackData.reduce((acc, curr) => {
-                if (!acc[curr.presenter]) {
-                    acc[curr.presenter] = { count: 0, c: 0, e: 0, co: 0, comments: [] };
-                }
+            return feedbackEntries.reduce((acc, curr) => {
+                if (!acc[curr.presenter]) acc[curr.presenter] = { count: 0, c: 0, e: 0, co: 0, comments: [] };
                 acc[curr.presenter].count++;
                 acc[curr.presenter].c += curr.clarity;
                 acc[curr.presenter].e += curr.engagement;
@@ -272,92 +434,56 @@
 
         function renderDashboard() {
             const container = document.getElementById('results-container');
+            const totalText = document.getElementById('total-count');
             container.innerHTML = '';
             const grouped = getAggregatedData();
-
+            totalText.textContent = `${feedbackEntries.length} Total Submissions`;
             if (Object.keys(grouped).length === 0) {
-                container.innerHTML = '<p class="text-center text-slate-400 py-12">No feedback submitted yet.</p>';
+                container.innerHTML = '<p class="text-center text-slate-400 py-12">No responses in this session yet.</p>';
                 return;
             }
-
             Object.keys(grouped).sort().forEach(name => {
                 const data = grouped[name];
                 const avg = ((data.c + data.e + data.co) / (data.count * 3)).toFixed(1);
-                
                 const div = document.createElement('div');
-                div.className = 'border border-slate-100 rounded-xl p-6 hover:bg-slate-50 transition';
+                div.className = 'border border-slate-100 bg-white rounded-xl p-6 shadow-sm';
                 div.innerHTML = `
                     <div class="flex justify-between items-start mb-4">
-                        <div>
-                            <h3 class="font-bold text-lg text-slate-800">${name}</h3>
-                            <p class="text-sm text-slate-500">${data.count} review(s)</p>
-                        </div>
-                        <div class="bg-indigo-600 text-white px-3 py-1 rounded-full font-bold text-sm">
-                            Score: ${avg}
-                        </div>
+                        <div><h3 class="font-bold text-lg text-slate-800">${name}</h3><p class="text-xs text-slate-400">${data.count} review(s)</p></div>
+                        <div class="bg-indigo-600 text-white px-3 py-1 rounded-full font-bold text-sm">Score: ${avg}</div>
                     </div>
                     <div class="grid grid-cols-3 gap-2 mb-4">
-                        <div class="text-[10px] text-center bg-white p-2 rounded border">Clarity: ${(data.c/data.count).toFixed(1)}</div>
-                        <div class="text-[10px] text-center bg-white p-2 rounded border">Engage: ${(data.e/data.count).toFixed(1)}</div>
-                        <div class="text-[10px] text-center bg-white p-2 rounded border">Content: ${(data.co/data.count).toFixed(1)}</div>
+                        <div class="text-[10px] text-center bg-slate-50 p-2 rounded">Clarity: ${(data.c/data.count).toFixed(1)}</div>
+                        <div class="text-[10px] text-center bg-slate-50 p-2 rounded">Engage: ${(data.e/data.count).toFixed(1)}</div>
+                        <div class="text-[10px] text-center bg-slate-50 p-2 rounded">Content: ${(data.co/data.count).toFixed(1)}</div>
                     </div>
-                    ${data.comments.length > 0 ? `
-                        <div class="mt-2 pt-2 border-t border-slate-100">
-                            <p class="text-[10px] uppercase text-slate-400 font-bold mb-1">Recent Comments:</p>
-                            <ul class="text-xs text-slate-600 list-disc list-inside space-y-1">
-                                ${data.comments.slice(-3).map(c => `<li>${c}</li>`).join('')}
-                            </ul>
-                        </div>
-                    ` : ''}
+                    ${data.comments.length > 0 ? `<p class="text-[10px] uppercase text-slate-400 font-bold mb-1">Feedback:</p><ul class="text-xs text-slate-600 italic"><li>"${data.comments[data.comments.length-1]}"</li></ul>` : ''}
                 `;
                 container.appendChild(div);
             });
         }
 
-        function exportResults() {
+        window.exportResults = function() {
             const grouped = getAggregatedData();
             if (Object.keys(grouped).length === 0) return showToast("No data to export!");
-
-            let exportText = `PRESENTATION FEEDBACK SUMMARY (0-4 Scale) - ${new Date().toLocaleDateString()}\n`;
-            exportText += `==========================================\n\n`;
-
-            Object.keys(grouped).sort().forEach(name => {
-                const data = grouped[name];
-                const avg = ((data.c + data.e + data.co) / (data.count * 3)).toFixed(1);
-                
-                exportText += `PRESENTER: ${name.toUpperCase()}\n`;
-                exportText += `Reviews: ${data.count}\n`;
-                exportText += `Overall Avg: ${avg} / 4.0\n`;
-                exportText += `------------------------------------------\n`;
-                exportText += `Avg Clarity:    ${(data.c/data.count).toFixed(1)}\n`;
-                exportText += `Avg Engagement: ${(data.e/data.count).toFixed(1)}\n`;
-                exportText += `Avg Content:    ${(data.co/data.count).toFixed(1)}\n`;
-                exportText += `\nCOMMENTS:\n`;
-                
-                data.comments.forEach(c => {
-                    exportText += `- ${c}\n`;
-                });
-                exportText += `\n\n`;
+            let text = `SESSION: ${currentClassCode} - ${new Date().toLocaleDateString()}\n\n`;
+            Object.keys(grouped).sort().forEach(n => {
+                const d = grouped[n];
+                text += `${n.toUpperCase()}\nReviews: ${d.count} | Avg: ${((d.c+d.e+d.co)/(d.count*3)).toFixed(1)}\nComments:\n${d.comments.map(c => "- "+c).join('\n')}\n\n`;
             });
-
             const el = document.createElement('textarea');
-            el.value = exportText;
-            document.body.appendChild(el);
-            el.select();
-            document.execCommand('copy');
-            document.body.removeChild(el);
-
-            showToast("Summary copied to clipboard!");
-        }
+            el.value = text; document.body.appendChild(el); el.select();
+            document.execCommand('copy'); document.body.removeChild(el);
+            showToast("Export copied to clipboard!");
+        };
 
         function showToast(msg) {
-            const toast = document.getElementById('toast');
-            toast.innerText = msg;
-            toast.style.opacity = '1';
-            setTimeout(() => toast.style.opacity = '0', 2500);
+            const t = document.getElementById('toast');
+            t.innerText = msg; t.style.opacity = '1';
+            setTimeout(() => t.style.opacity = '0', 2500);
         }
 
-        init();
+        startApp();
     </script>
 </body>
 </html>
