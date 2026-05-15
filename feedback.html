@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Presentation Feedback</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+        
+        /* Custom Radio Styling for 0-4 scale */
+        .rating-group input { display: none; }
+        .rating-group label {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 44px;
+            height: 44px;
+            border-radius: 12px;
+            border: 2px solid #e2e8f0;
+            background: white;
+            color: #64748b;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .rating-group input:checked + label {
+            background: #4f46e5;
+            border-color: #4f46e5;
+            color: white;
+            transform: scale(1.1);
+            box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
+        }
+        .rating-group label:hover {
+            border-color: #4f46e5;
+            color: #4f46e5;
+        }
+
+        #toast {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #10b981;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 12px;
+            font-weight: bold;
+            opacity: 0;
+            transition: opacity 0.3s;
+            pointer-events: none;
+            z-index: 100;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 min-h-screen pb-12">
+
+    <!-- Navigation Header -->
+    <nav class="bg-white border-b border-slate-200 px-6 py-4 sticky top-0 z-10 shadow-sm">
+        <div class="max-w-2xl mx-auto flex justify-between items-center">
+            <h1 class="text-xl font-bold text-slate-800">Peer Feedback</h1>
+            <button onclick="toggleView()" id="view-toggle" class="text-sm font-semibold text-indigo-600 hover:text-indigo-800 transition text-right">
+                Switch to Dashboard
+            </button>
+        </div>
+    </nav>
+
+    <main class="max-w-2xl mx-auto p-6">
+        
+        <!-- Submission Form View -->
+        <section id="form-view" class="space-y-6">
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-8">
+                <div class="mb-6">
+                    <h2 class="text-2xl font-bold text-slate-900">Rate a Presentation</h2>
+                    <p class="text-slate-500 text-sm">Scale: 0 (Needs Work) to 4 (Exceptional)</p>
+                </div>
+                
+                <form id="feedback-form" onsubmit="submitFeedback(event)" class="space-y-8">
+                    <!-- Presenter Selection -->
+                    <div>
+                        <label class="block text-sm font-bold text-slate-700 mb-2 uppercase tracking-wide">Who is presenting?</label>
+                        <select id="presenter-select" required class="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition">
+                            <option value="">Select a student...</option>
+                        </select>
+                    </div>
+
+                    <hr class="border-slate-100">
+
+                    <!-- Ratings -->
+                    <div class="space-y-8">
+                        <!-- Clarity -->
+                        <div class="space-y-3">
+                            <span class="font-bold text-slate-700 block">Clarity (Voice & Visuals)</span>
+                            <div class="flex gap-3 rating-group">
+                                <input type="radio" id="c0" name="clarity" value="0" required/><label for="c0">0</label>
+                                <input type="radio" id="c1" name="clarity" value="1"/><label for="c1">1</label>
+                                <input type="radio" id="c2" name="clarity" value="2"/><label for="c2">2</label>
+                                <input type="radio" id="c3" name="clarity" value="3"/><label for="c3">3</label>
+                                <input type="radio" id="c4" name="clarity" value="4"/><label for="c4">4</label>
+                            </div>
+                        </div>
+
+                        <!-- Engagement -->
+                        <div class="space-y-3">
+                            <span class="font-bold text-slate-700 block">Engagement (Eye Contact)</span>
+                            <div class="flex gap-3 rating-group">
+                                <input type="radio" id="e0" name="engagement" value="0" required/><label for="e0">0</label>
+                                <input type="radio" id="e1" name="engagement" value="1"/><label for="e1">1</label>
+                                <input type="radio" id="e2" name="engagement" value="2"/><label for="e2">2</label>
+                                <input type="radio" id="e3" name="engagement" value="3"/><label for="e3">3</label>
+                                <input type="radio" id="e4" name="engagement" value="4"/><label for="e4">4</label>
+                            </div>
+                        </div>
+
+                        <!-- Content -->
+                        <div class="space-y-3">
+                            <span class="font-bold text-slate-700 block">Content (Knowledge)</span>
+                            <div class="flex gap-3 rating-group">
+                                <input type="radio" id="co0" name="content" value="0" required/><label for="co0">0</label>
+                                <input type="radio" id="co1" name="content" value="1"/><label for="co1">1</label>
+                                <input type="radio" id="co2" name="content" value="2"/><label for="co2">2</label>
+                                <input type="radio" id="co3" name="content" value="3"/><label for="co3">3</label>
+                                <input type="radio" id="co4" name="content" value="4"/><label for="co4">4</label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Comments -->
+                    <div>
+                        <label class="block text-sm font-bold text-slate-700 mb-2 uppercase tracking-wide">Feedback & Comments</label>
+                        <textarea id="comment" rows="4" placeholder="What did they do well? What could be improved?" class="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition"></textarea>
+                    </div>
+
+                    <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 rounded-xl shadow-lg shadow-indigo-200 transition-all active:scale-[0.98]">
+                        Submit Feedback
+                    </button>
+                </form>
+            </div>
+        </section>
+
+        <!-- Dashboard View (Hidden by default) -->
+        <section id="dashboard-view" class="hidden space-y-6">
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-8">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-2xl font-bold text-slate-900">Class Results</h2>
+                    <button onclick="exportResults()" class="bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold px-4 py-2 rounded-lg transition uppercase tracking-wider">
+                        Export All Data
+                    </button>
+                </div>
+                
+                <div id="results-container" class="space-y-4">
+                    <!-- Results dynamically generated here -->
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Success Message Overlay -->
+    <div id="success-overlay" class="fixed inset-0 bg-indigo-900/90 flex flex-col items-center justify-center text-white p-6 z-50 hidden">
+        <div class="w-20 h-20 bg-emerald-500 rounded-full flex items-center justify-center mb-6">
+            <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+        </div>
+        <h3 class="text-3xl font-bold mb-2">Feedback Received!</h3>
+        <p class="text-indigo-200 mb-8">Thank you for your constructive peer review.</p>
+        <button onclick="resetForm()" class="bg-white text-indigo-900 px-8 py-3 rounded-xl font-bold hover:bg-indigo-50 transition">
+            Submit Another
+        </button>
+    </div>
+
+    <div id="toast">Copied to clipboard!</div>
+
+    <script>
+        const studentNames = [
+            "GENESIS A",
+"SANTANA B",
+"AYDAN C",
+"DESTINY C",
+"KATELYN C",
+"JAVIER C",
+"ESMERALDA C",
+"VICTORIA C",
+"JACQUELINE C",
+"GIA C",
+"DAVID C",
+"IZABELL D",
+"DENISE D",
+"TAILYNN H",
+"JONATHAN H",
+"LANDEN H",
+"SAMARA L",
+"JOSE M",
+"DAMIAN P",
+"RAIDEN P",
+"EMANUEL AGUSTIN S",
+"YELIT S",
+"JULIUS S",
+"EVELYN S",
+"JONATHAN T",
+"XADRIAN T",
+"ALEXA V",
+"DARIUS V",
+"ANGEL V"
+        ];
+
+        let feedbackData = [];
+
+        function init() {
+            const select = document.getElementById('presenter-select');
+            studentNames.sort().forEach(name => {
+                const opt = document.createElement('option');
+                opt.value = name;
+                opt.textContent = name;
+                select.appendChild(opt);
+            });
+            renderDashboard();
+        }
+
+        function toggleView() {
+            const formView = document.getElementById('form-view');
+            const dashboardView = document.getElementById('dashboard-view');
+            const toggleBtn = document.getElementById('view-toggle');
+
+            if (formView.classList.contains('hidden')) {
+                formView.classList.remove('hidden');
+                dashboardView.classList.add('hidden');
+                toggleBtn.textContent = "Switch to Dashboard";
+            } else {
+                formView.classList.add('hidden');
+                dashboardView.classList.remove('hidden');
+                toggleBtn.textContent = "Back to Form";
+                renderDashboard();
+            }
+        }
+
+        function submitFeedback(e) {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+            const entry = {
+                presenter: document.getElementById('presenter-select').value,
+                clarity: parseInt(formData.get('clarity')),
+                engagement: parseInt(formData.get('engagement')),
+                content: parseInt(formData.get('content')),
+                comment: document.getElementById('comment').value,
+                timestamp: new Date().toLocaleString()
+            };
+
+            feedbackData.push(entry);
+            document.getElementById('success-overlay').classList.remove('hidden');
+        }
+
+        function resetForm() {
+            document.getElementById('feedback-form').reset();
+            document.getElementById('success-overlay').classList.add('hidden');
+            renderDashboard();
+        }
+
+        function getAggregatedData() {
+            return feedbackData.reduce((acc, curr) => {
+                if (!acc[curr.presenter]) {
+                    acc[curr.presenter] = { count: 0, c: 0, e: 0, co: 0, comments: [] };
+                }
+                acc[curr.presenter].count++;
+                acc[curr.presenter].c += curr.clarity;
+                acc[curr.presenter].e += curr.engagement;
+                acc[curr.presenter].co += curr.content;
+                if(curr.comment) acc[curr.presenter].comments.push(curr.comment);
+                return acc;
+            }, {});
+        }
+
+        function renderDashboard() {
+            const container = document.getElementById('results-container');
+            container.innerHTML = '';
+            const grouped = getAggregatedData();
+
+            if (Object.keys(grouped).length === 0) {
+                container.innerHTML = '<p class="text-center text-slate-400 py-12">No feedback submitted yet.</p>';
+                return;
+            }
+
+            Object.keys(grouped).sort().forEach(name => {
+                const data = grouped[name];
+                const avg = ((data.c + data.e + data.co) / (data.count * 3)).toFixed(1);
+                
+                const div = document.createElement('div');
+                div.className = 'border border-slate-100 rounded-xl p-6 hover:bg-slate-50 transition';
+                div.innerHTML = `
+                    <div class="flex justify-between items-start mb-4">
+                        <div>
+                            <h3 class="font-bold text-lg text-slate-800">${name}</h3>
+                            <p class="text-sm text-slate-500">${data.count} review(s)</p>
+                        </div>
+                        <div class="bg-indigo-600 text-white px-3 py-1 rounded-full font-bold text-sm">
+                            Score: ${avg}
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-3 gap-2 mb-4">
+                        <div class="text-[10px] text-center bg-white p-2 rounded border">Clarity: ${(data.c/data.count).toFixed(1)}</div>
+                        <div class="text-[10px] text-center bg-white p-2 rounded border">Engage: ${(data.e/data.count).toFixed(1)}</div>
+                        <div class="text-[10px] text-center bg-white p-2 rounded border">Content: ${(data.co/data.count).toFixed(1)}</div>
+                    </div>
+                    ${data.comments.length > 0 ? `
+                        <div class="mt-2 pt-2 border-t border-slate-100">
+                            <p class="text-[10px] uppercase text-slate-400 font-bold mb-1">Recent Comments:</p>
+                            <ul class="text-xs text-slate-600 list-disc list-inside space-y-1">
+                                ${data.comments.slice(-3).map(c => `<li>${c}</li>`).join('')}
+                            </ul>
+                        </div>
+                    ` : ''}
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        function exportResults() {
+            const grouped = getAggregatedData();
+            if (Object.keys(grouped).length === 0) return showToast("No data to export!");
+
+            let exportText = `PRESENTATION FEEDBACK SUMMARY (0-4 Scale) - ${new Date().toLocaleDateString()}\n`;
+            exportText += `==========================================\n\n`;
+
+            Object.keys(grouped).sort().forEach(name => {
+                const data = grouped[name];
+                const avg = ((data.c + data.e + data.co) / (data.count * 3)).toFixed(1);
+                
+                exportText += `PRESENTER: ${name.toUpperCase()}\n`;
+                exportText += `Reviews: ${data.count}\n`;
+                exportText += `Overall Avg: ${avg} / 4.0\n`;
+                exportText += `------------------------------------------\n`;
+                exportText += `Avg Clarity:    ${(data.c/data.count).toFixed(1)}\n`;
+                exportText += `Avg Engagement: ${(data.e/data.count).toFixed(1)}\n`;
+                exportText += `Avg Content:    ${(data.co/data.count).toFixed(1)}\n`;
+                exportText += `\nCOMMENTS:\n`;
+                
+                data.comments.forEach(c => {
+                    exportText += `- ${c}\n`;
+                });
+                exportText += `\n\n`;
+            });
+
+            const el = document.createElement('textarea');
+            el.value = exportText;
+            document.body.appendChild(el);
+            el.select();
+            document.execCommand('copy');
+            document.body.removeChild(el);
+
+            showToast("Summary copied to clipboard!");
+        }
+
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            toast.innerText = msg;
+            toast.style.opacity = '1';
+            setTimeout(() => toast.style.opacity = '0', 2500);
+        }
+
+        init();
+    </script>
+</body>
+</html>
