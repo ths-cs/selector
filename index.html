@@ -81,6 +81,7 @@
             opacity: 0;
             transition: opacity 0.3s;
             pointer-events: none;
+            z-index: 50;
         }
     </style>
 </head>
@@ -100,22 +101,22 @@
         </div>
 
         <!-- Status Action Buttons -->
-        <div id="status-actions" class="flex gap-4 mt-8 opacity-0 pointer-events-none transition-opacity">
-            <button onclick="setStatus('presented')" class="flex flex-col items-center gap-1 group">
+        <div id="status-actions" class="flex gap-4 mt-8 opacity-0 pointer-events-none transition-all duration-300">
+            <button onclick="toggleStatus('presented')" id="btn-presented" class="flex flex-col items-center gap-1 group">
                 <div class="w-12 h-12 rounded-full bg-emerald-500/10 border border-emerald-500/50 flex items-center justify-center group-hover:bg-emerald-500 group-hover:text-white text-emerald-500 transition-all">
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
                 </div>
                 <span class="text-[10px] font-bold text-emerald-500 uppercase">Present</span>
             </button>
             
-            <button onclick="setStatus('skipped')" class="flex flex-col items-center gap-1 group">
+            <button onclick="toggleStatus('skipped')" id="btn-skipped" class="flex flex-col items-center gap-1 group">
                 <div class="w-12 h-12 rounded-full bg-amber-500/10 border border-amber-500/50 flex items-center justify-center group-hover:bg-amber-500 group-hover:text-white text-amber-500 transition-all">
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m6 17 5-5-5-5"/><path d="m13 17 5-5-5-5"/></svg>
                 </div>
                 <span class="text-[10px] font-bold text-amber-500 uppercase">Skip</span>
             </button>
 
-            <button onclick="setStatus('absent')" class="flex flex-col items-center gap-1 group">
+            <button onclick="toggleStatus('absent')" id="btn-absent" class="flex flex-col items-center gap-1 group">
                 <div class="w-12 h-12 rounded-full bg-rose-500/10 border border-rose-500/50 flex items-center justify-center group-hover:bg-rose-500 group-hover:text-white text-rose-500 transition-all">
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
                 </div>
@@ -136,7 +137,7 @@
             </div>
 
             <div class="flex gap-4">
-                <button onclick="exportList()" class="px-6 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-[10px] font-bold rounded-lg border border-slate-700 uppercase tracking-widest transition-all">
+                <button onclick="exportResults()" class="px-6 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-[10px] font-bold rounded-lg border border-slate-700 uppercase tracking-widest transition-all">
                     Copy Export List (With Timestamps)
                 </button>
                 <button onclick="resetOrder()" class="px-6 py-2 text-[10px] text-slate-600 hover:text-indigo-400 uppercase tracking-widest font-bold transition-colors">
@@ -146,52 +147,65 @@
         </div>
     </main>
 
-    <!-- Sidebar Queue -->
-    <aside class="w-full md:w-80 flex flex-col bg-slate-900/80 rounded-3xl border border-slate-800 p-6 order-1 md:order-2 max-h-[35vh] md:max-h-full">
-        <h2 class="text-sm font-black uppercase tracking-tighter text-indigo-400 mb-4 flex justify-between items-center">
-            Queue 
-            <span id="progress-text" class="text-slate-500 text-[10px]">0 / 29</span>
-        </h2>
+    <!-- Sidebar Queues (Dynamic Categorized Lists) -->
+    <aside class="w-full md:w-80 flex flex-col bg-slate-900/80 rounded-3xl border border-slate-800 p-5 order-1 md:order-2 h-[45vh] md:h-full overflow-y-auto sidebar-list gap-6">
         
-        <div id="queue-list" class="sidebar-list flex-grow overflow-y-auto grid grid-cols-2 sm:grid-cols-3 md:grid-cols-1 gap-2 pr-2">
-            <!-- List items injected here -->
+        <!-- List 1: Up Next / Active Queue -->
+        <div>
+            <h2 class="text-xs font-black uppercase tracking-wider text-indigo-400 mb-2 flex justify-between items-center">
+                Remaining Queue 
+                <span id="queue-count" class="text-slate-500 text-[10px]">0</span>
+            </h2>
+            <div id="queue-list" class="space-y-1.5 max-h-48 md:max-h-none overflow-y-auto">
+                <!-- Injected via JS -->
+            </div>
         </div>
+
+        <!-- List 2: Presented List -->
+        <div>
+            <h2 class="text-xs font-black uppercase tracking-wider text-emerald-400 mb-2 flex justify-between items-center">
+                Presented 
+                <span id="presented-count" class="text-slate-500 text-[10px]">0</span>
+            </h2>
+            <div id="presented-list" class="space-y-1.5">
+                <!-- Injected via JS -->
+            </div>
+        </div>
+
+        <!-- List 3: Skipped List -->
+        <div>
+            <h2 class="text-xs font-black uppercase tracking-wider text-amber-400 mb-2 flex justify-between items-center">
+                Skipped 
+                <span id="skipped-count" class="text-slate-500 text-[10px]">0</span>
+            </h2>
+            <div id="skipped-list" class="space-y-1.5">
+                <!-- Injected via JS -->
+            </div>
+        </div>
+
+        <!-- List 4: Absent List -->
+        <div>
+            <h2 class="text-xs font-black uppercase tracking-wider text-rose-400 mb-2 flex justify-between items-center">
+                Absent 
+                <span id="absent-count" class="text-slate-500 text-[10px]">0</span>
+            </h2>
+            <div id="absent-list" class="space-y-1.5">
+                <!-- Injected via JS -->
+            </div>
+        </div>
+
     </aside>
 
     <div id="copy-toast">Export Copied to Clipboard!</div>
 
     <script>
         const studentNames = [
-"GENESIS A",
-"SANTANA B",
-"AYDAN C",
-"DESTINY C",
-"KATELYN C",
-"JAVIER C",
-"ESMERALDA C",
-"VICTORIA C",
-"JACQUELINE C",
-"GIA C",
-"DAVID C",
-"IZABELL D",
-"DENISE D",
-"TAILYNN H",
-"JONATHAN H",
-"LANDEN H",
-"SAMARA L",
-"JOSE M",
-"DAMIAN P",
-"RAIDEN P",
-"EMANUEL AGUSTIN S",
-"YELIT S",
-"JULIUS S",
-"EVELYN S",
-"JONATHAN T",
-"XADRIAN T",
-"ALEXA V",
-"DARIUS V",
-"ANGEL V"
-
+            "GENESIS A", "SANTANA B", "AYDAN C", "DESTINY C", "KATELYN C", 
+            "JAVIER C", "ESMERALDA C", "VICTORIA C", "JACQUELINE C", "GIA C", 
+            "DAVID C", "IZABELL D", "DENISE D", "TAILYNN H", "JONATHAN H", 
+            "LANDEN H", "SAMARA L", "JOSE M", "DAMIAN P", "RAIDEN P", 
+            "EMANUEL AGUSTIN S", "YELIT S", "JULIUS S", "EVELYN S", 
+            "JONATHAN T", "XADRIAN T", "ALEXA V", "DARIUS V", "ANGEL V"
         ];
 
         let shuffledData = [];
@@ -204,17 +218,28 @@
                 currentIndex--;
                 [array[currentIndex], array[randomIndex]] = [array[randomIndex], array[currentIndex]];
             }
-            return array.map(name => ({ 
+            return array.map((name, index) => ({ 
                 name, 
                 status: 'pending',
-                timestamp: null 
+                timestamp: null,
+                initialIndex: index + 1
             }));
         }
 
-        function setStatus(status) {
+        // Toggles a status on/off. If same status is clicked, returns back to pending
+        function toggleStatus(status) {
             if (currentIndex >= 0 && currentIndex < shuffledData.length) {
-                shuffledData[currentIndex].status = status;
-                shuffledData[currentIndex].timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                const currentStudent = shuffledData[currentIndex];
+                
+                if (currentStudent.status === status) {
+                    // Turn off and revert to pending
+                    currentStudent.status = 'pending';
+                    currentStudent.timestamp = null;
+                } else {
+                    // Set to new status
+                    currentStudent.status = status;
+                    currentStudent.timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                }
                 updateDisplay();
             }
         }
@@ -222,11 +247,21 @@
         function updateDisplay() {
             const display = document.getElementById('current-name');
             const queueList = document.getElementById('queue-list');
-            const progress = document.getElementById('progress-text');
+            const presentedList = document.getElementById('presented-list');
+            const skippedList = document.getElementById('skipped-list');
+            const absentList = document.getElementById('absent-list');
+            
             const statusActions = document.getElementById('status-actions');
             const indicator = document.getElementById('status-indicator');
             const headerLabel = document.getElementById('header-label');
 
+            // Reset action button styles
+            ['btn-presented', 'btn-skipped', 'btn-absent'].forEach(id => {
+                const el = document.getElementById(id).querySelector('div');
+                el.className = el.className.replace(/ bg-\w+-\d+ text-white/g, '');
+            });
+
+            // Update main display
             if (currentIndex === -1) {
                 display.innerText = "READY?";
                 display.className = "name-display text-center px-6 text-slate-700";
@@ -243,65 +278,89 @@
                 statusActions.classList.remove('opacity-0', 'pointer-events-none');
                 headerLabel.innerText = "Currently Presenting";
 
+                // Active status styling on action buttons
                 if (current.status === 'presented') {
                     display.className = "name-display text-center px-6 text-emerald-400";
                     indicator.className = "h-3 w-3 bg-emerald-500 rounded-full active-glow";
+                    document.getElementById('btn-presented').querySelector('div').className += ' bg-emerald-500 text-white';
                 } else if (current.status === 'absent') {
                     display.className = "name-display text-center px-6 text-rose-500 line-through opacity-50";
                     indicator.className = "h-3 w-3 bg-rose-500 rounded-full";
+                    document.getElementById('btn-absent').querySelector('div').className += ' bg-rose-500 text-white';
                 } else if (current.status === 'skipped') {
                     display.className = "name-display text-center px-6 text-amber-500 italic opacity-80";
                     indicator.className = "h-3 w-3 bg-amber-500 rounded-full active-glow";
+                    document.getElementById('btn-skipped').querySelector('div').className += ' bg-amber-500 text-white';
                 } else {
                     display.className = "name-display text-center px-6 text-white";
                     indicator.className = "h-3 w-3 bg-indigo-500 rounded-full active-glow";
                 }
             }
 
+            // Clear Lists
             queueList.innerHTML = '';
+            presentedList.innerHTML = '';
+            skippedList.innerHTML = '';
+            absentList.innerHTML = '';
+
+            let qCount = 0, pCount = 0, sCount = 0, aCount = 0;
+
+            // Sort & populate dynamically
             shuffledData.forEach((student, index) => {
-                const div = document.createElement('div');
                 const isPast = index < currentIndex;
                 const isCurrent = index === currentIndex;
+
+                const div = document.createElement('div');
                 
-                let statusIcon = '';
-                let bgClass = 'bg-slate-800 border-slate-700 text-slate-300';
-                
+                // Base Element Generation
+                const buildElement = (bgClass, iconSymbol) => {
+                    div.className = `p-2 px-3 rounded-lg text-xs font-bold transition-all border flex justify-between items-center ${bgClass}`;
+                    div.innerHTML = `
+                        <div class="flex flex-col">
+                            <span><span class="opacity-40 mr-1">${student.initialIndex}</span> ${student.name}</span>
+                            ${student.timestamp ? `<span class="text-[8px] opacity-50 mt-0.5">${student.timestamp}</span>` : ''}
+                        </div>
+                        <span class="font-black">${iconSymbol}</span>
+                    `;
+                };
+
                 if (student.status === 'presented') {
-                    statusIcon = '✓';
-                    bgClass = 'bg-emerald-900/20 border-emerald-500/30 text-emerald-400';
+                    buildElement('bg-emerald-900/20 border-emerald-500/30 text-emerald-400', '✓');
+                    presentedList.appendChild(div);
+                    pCount++;
                 } else if (student.status === 'absent') {
-                    statusIcon = '✕';
-                    bgClass = 'bg-rose-900/20 border-rose-500/30 text-rose-400 line-through opacity-60';
+                    buildElement('bg-rose-900/20 border-rose-500/30 text-rose-400 line-through opacity-60', '✕');
+                    absentList.appendChild(div);
+                    aCount++;
                 } else if (student.status === 'skipped') {
-                    statusIcon = '»';
-                    bgClass = 'bg-amber-900/20 border-amber-500/30 text-amber-400';
-                } else if (isCurrent) {
-                    bgClass = 'bg-indigo-600 border-indigo-400 text-white scale-105 shadow-lg z-10';
-                } else if (isPast) {
-                    bgClass = 'bg-slate-800/30 border-transparent text-slate-600';
+                    buildElement('bg-amber-900/20 border-amber-500/30 text-amber-400', '»');
+                    skippedList.appendChild(div);
+                    sCount++;
+                } else {
+                    // It is pending
+                    let bgStyle = 'bg-slate-800 border-slate-700 text-slate-300';
+                    if (isCurrent) {
+                        bgStyle = 'bg-indigo-600 border-indigo-400 text-white scale-102 shadow-lg z-10';
+                    } else if (isPast) {
+                        bgStyle = 'bg-slate-800/30 border-transparent text-slate-600';
+                    }
+                    buildElement(bgStyle, '');
+                    queueList.appendChild(div);
+                    qCount++;
                 }
-                
-                div.className = `p-2 px-3 rounded-lg text-xs font-bold transition-all border flex justify-between items-center ${bgClass}`;
-                div.innerHTML = `
-                    <div class="flex flex-col">
-                        <span><span class="opacity-40 mr-1">${index + 1}</span> ${student.name}</span>
-                        ${student.timestamp ? `<span class="text-[8px] opacity-50 mt-1">${student.timestamp}</span>` : ''}
-                    </div>
-                    <span class="font-black">${statusIcon}</span>
-                `;
-                queueList.appendChild(div);
             });
 
-            progress.innerText = `${Math.max(0, currentIndex + 1)} / ${shuffledData.length}`;
+            // Update section counts
+            document.getElementById('queue-count').innerText = qCount;
+            document.getElementById('presented-count').innerText = pCount;
+            document.getElementById('skipped-count').innerText = sCount;
+            document.getElementById('absent-count').innerText = aCount;
         }
 
         function nextPresenter() {
             if (currentIndex < shuffledData.length) {
                 currentIndex++;
                 updateDisplay();
-                const currentEl = document.querySelector('.bg-indigo-600');
-                if (currentEl) currentEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
             }
         }
 
@@ -312,14 +371,14 @@
             }
         }
 
-        function exportList() {
+        function exportResults() {
             const date = new Date().toLocaleDateString();
             let text = `Presentation Session: ${date}\n--------------------------------\n`;
             
-            shuffledData.forEach((s, i) => {
-                const status = s.status === 'pending' ? 'Not reached' : s.status.toUpperCase();
+            shuffledData.forEach((s) => {
+                const status = s.status === 'pending' ? 'Not reached/Pending' : s.status.toUpperCase();
                 const time = s.timestamp ? ` at ${s.timestamp}` : '';
-                text += `${i+1}. ${s.name.padEnd(20)} | Status: ${status}${time}\n`;
+                text += `${s.initialIndex}. ${s.name.padEnd(20)} | Status: ${status}${time}\n`;
             });
 
             const dummy = document.createElement("textarea");
@@ -347,11 +406,11 @@
             } else if (key === 'arrowleft') {
                 prevPresenter();
             } else if (key === 'c' || key === 'p') {
-                setStatus('presented');
+                toggleStatus('presented');
             } else if (key === 's') {
-                setStatus('skipped');
+                toggleStatus('skipped');
             } else if (key === 'a' || key === 'x') {
-                setStatus('absent');
+                toggleStatus('absent');
             }
         });
 
